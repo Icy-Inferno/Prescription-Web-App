@@ -1,65 +1,81 @@
 package application;
 
-import java.sql.Connection;
-import java.sql.SQLException;
+import application.model.*;
+import application.service.SequenceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-
-import application.model.*;
-import application.service.*;
-import view.*;
+import view.PrescriptionView;
 
 @Controller
 public class ControllerPrescriptionCreate {
 
-	@Autowired
-	PrescriptionRepository prescriptionRepository;
+    @Autowired
+    PrescriptionRepository prescriptionRepository;
 
-	@Autowired
-	SequenceService sequence;
-	
-	/*
-	 * Doctor requests blank form for new prescription.
-	 */
-	@GetMapping("/prescription/new")
-	public String getPrescriptionForm(Model model) {
-		model.addAttribute("prescription", new PrescriptionView());
-		return "prescription_create";
-	}
+    @Autowired
+    DoctorRepository doctorRepository;
 
-	// process data entered on prescription_create form
-	@PostMapping("/prescription")
-	public String createPrescription(PrescriptionView p, Model model) {
+    @Autowired
+    PatientRepository patientRepository;
 
-		System.out.println("createPrescription " + p);
+    @Autowired
+    SequenceService sequenceService;
+    @Autowired
+    private DrugRepository drugRepository;
 
-		/*
-		 * valid doctor name and id
-		 */
-		//TODO
+    /*
+     * Doctor requests blank form for new prescription.
+     */
+    @GetMapping("/prescription/new")
+    public String getPrescriptionForm(Model model) {
+        model.addAttribute("prescription", new PrescriptionView());
+        return "prescription_create";
+    }
 
-		/*
-		 * valid patient name and id
-		 */
-		//TODO
+    // process data entered on prescription_create form
+    @PostMapping("/prescription")
+    public String createPrescription(PrescriptionView p, Model model) {
+        System.out.println("prescription");
 
-		/*
-		 * valid drug name
-		 */
-		//TODO
+        Doctor doctor = doctorRepository.findByIdAndFirstNameAndLastName(p.getDoctorId(), p.getDoctorFirstName(), p.getDoctorLastName());
+        if (doctor == null) {
+            model.addAttribute("message","doctor not found");
+            model.addAttribute("prescription", p);
+            return "prescription_create";
+        }
 
-		/*
-		 * insert prescription  
-		 */
-		//TODO 
-		
+        Patient patient = patientRepository.findByIdAndFirstNameAndLastName(p.getPatientId(), p.getPatientFirstName(), p.getPatientLastName());
+        if (patient == null) {
+            model.addAttribute("message","patient not found");
+            model.addAttribute("prescription", p);
+            return "prescription_create";
+        }
 
-		model.addAttribute("message", "Prescription created.");
-		model.addAttribute("prescription", p);
-		return "prescription_show";
-	}
+        Drug drug = drugRepository.findByName(p.getDrugName());
+        if(drug == null){
+            model.addAttribute("message", "patient not found");
+            model.addAttribute("prescription", p);
+            return "prescription_create";
+        }
+
+        Prescription prescription = new Prescription();
+        prescription.setRxid(sequenceService.getNextSequence("PRESCRIPTION_SEQUENCE"));
+        prescription.setDoctorId(doctor.getId());
+        prescription.setPatientId(patient.getId());
+        prescription.setDrugName(drug.getName());
+        prescription.setDateCreated(java.time.LocalDate.now().toString());
+        prescription.setQuantity(p.getQuantity());
+        prescription.setRefills(p.getRefillsRemaining());
+
+        prescriptionRepository.save(prescription);
+        p.setRxid(prescription.getRxid());
+        model.addAttribute("message", "prescription created");
+        model.addAttribute("prescription", p);
+        return "prescription_create";
+    }
+
 
 }
