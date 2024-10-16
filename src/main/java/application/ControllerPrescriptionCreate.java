@@ -68,7 +68,7 @@ public class ControllerPrescriptionCreate {
         prescription.setDrugName(drug.getName());
         prescription.setDateCreated(java.time.LocalDate.now().toString());
         prescription.setQuantity(p.getQuantity());
-        prescription.setRefills(p.getRefillsRemaining());
+        prescription.setRefills(p.getRefills());
 
         prescriptionRepository.save(prescription);
         p.setRxid(prescription.getRxid());
